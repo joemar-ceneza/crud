@@ -3,7 +3,7 @@ import { MdEdit, MdDelete } from "react-icons/md";
 import axios from "axios";
 // fetch
 import useFetch from "../hook/useFetch";
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import { CrudContext } from "../context/CrudContext";
 
 // components
@@ -31,6 +31,46 @@ export default function Table() {
     toggleUpdate,
     updateNote,
   } = useContext(CrudContext);
+
+  // Add state variables for pagination
+  const [currentPage, setCurrentPage] = useState(
+    parseInt(localStorage.getItem("currentPage")) || 1
+  );
+  const [totalPages, setTotalPages] = useState(1);
+
+  // Function to fetch data for the current page
+  const fetchData = async () => {
+    try {
+      const response = await axios.get(`${apiUrl}?page=${currentPage}`);
+      setData(response.data.notes);
+      setTotalPages(response.data.totalPages);
+      // Store the data in local storage
+      localStorage.setItem("currentPage", currentPage.toString());
+      localStorage.setItem("data", JSON.stringify(response.data.notes));
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
+
+  useEffect(() => {
+    // Check if there is data in local storage
+    const storedData = JSON.parse(localStorage.getItem("data"));
+
+    if (storedData) {
+      // If data exists in local storage, set it to the component's state
+      setData(storedData);
+    }
+
+    // Fetch data when the page loads or when currentPage changes
+    fetchData();
+  }, [currentPage, setData]);
+
+  // Function to handle page changes
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
 
   return (
     <>
@@ -156,6 +196,19 @@ export default function Table() {
               })}
           </tbody>
         </table>
+      </div>
+      <div className="mt-4">
+        <button
+          onClick={() => handlePageChange(currentPage - 1)}
+          disabled={currentPage === 1}>
+          Previous
+        </button>
+        <span className="mx-4">Page {currentPage}</span>
+        <button
+          onClick={() => handlePageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}>
+          Next
+        </button>
       </div>
     </>
   );
